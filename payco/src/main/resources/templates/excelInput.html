@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+<div style="border: 1px solid #222;">
+    <form th:action="@{/excel}" method="post" enctype="multipart/form-data">
+        <ul>
+            <li>payco Excel<input th:type="file" name="fileUploadPayco"></li>
+        </ul>
+        <ul>
+            <li>bay Excel<input th:type="file" name="fileUploadBay"></li>
+        </ul>
+        <input th:type="submit" th:value="전송">
+    </form>
+</div>
+</body>
+</html>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>excel Data</title>
+    <style>
+        table {
+            width: 100%;
+            border: 1px solid #444444;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            border: 1px solid #444444;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+<div style="height: 300px; overflow: scroll">
+    <p>payco Excel Data</p>
+    <table class="tb_col">
+        <tr>
+            <td>거래번호</td>
+            <td>거래일시</td>
+            <td>사번</td>
+            <td>이름</td>
+            <td>그룹(부서)</td>
+            <td>호칭</td>
+            <td>사용처</td>
+            <td>결제방식</td>
+            <td>거래타입</td>
+            <td>총 결제금액</td>
+            <td>식권 결제금액</td>
+            <td>식권명</td>
+        </tr>
+        <tr th:each="payco : ${paycoExcelData}">
+            <td th:text="${payco.tranNumber}"></td>
+            <td th:text="${payco.tranDate}"></td>
+            <td th:text="${payco.companyNumber}"></td>
+            <td th:text="${payco.name}"></td>
+            <td th:text="${payco.group}"></td>
+            <td th:text="${payco.rank}"></td>
+            <td th:text="${payco.usePlace}"></td>
+            <td th:text="${payco.paymentType}"></td>
+            <td th:text="${payco.tranType}"></td>
+            <td th:text="${payco.totalPaymentAmount}"></td>
+            <td th:text="${payco.ticketPaymentAmount}"></td>
+            <td th:text="${payco.ticketType}"></td>
+        </tr>
+    </table>
+</div>
+
+<div style="height: 300px; overflow: scroll">
+    <p>bay Excel Data</p>
+    <table class="tb_col">
+        <tr>
+            <td>seq</td>
+            <td>거래일시</td>
+            <td>이름</td>
+            <td>사용처</td>
+            <td>식권명</td>
+            <td>식권 결제금액</td>
+            <td>종합 사용자</td>
+        </tr>
+        <tr th:each="bay : ${bayExcelData}">
+            <td th:text="${bay.seq}"></td>
+            <td th:text="${bay.useDate}"></td>
+            <td th:text="${bay.name}"></td>
+            <td th:text="${bay.usePlace}"></td>
+            <td th:text="${bay.ticketType}"></td>
+            <td th:text="${bay.ticketPaymentAmount}"></td>
+            <td th:text="${bay.names}"></td>
+        </tr>
+    </table>
+</div>
+
+<div style="height: 500px; overflow: scroll">
+    <p>excel sum</p>
+    <table class="tb_col">
+        <tr>
+            <td>거래번호</td>
+            <td>거래일시</td>
+            <td>사번</td>
+            <td>이름</td>
+            <td>사용처</td>
+            <td>결제방식</td>
+            <td>거래타입</td>
+            <td>총 결제금액</td>
+            <td>식권 결제금액</td>
+            <td>식권명</td>
+            <td>복합사용자</td>
+        </tr>
+        <tr th:each="excel : ${excelSum}">
+            <td th:text="${excel.tranNumber}"></td>
+            <td th:text="${excel.tranDate}"></td>
+            <td th:text="${excel.companyNumber}"></td>
+            <td th:text="${excel.name}"></td>
+            <td th:text="${excel.usePlace}"></td>
+            <td th:text="${excel.paymentType}"></td>
+            <td th:text="${excel.tranType}"></td>
+            <td th:text="${excel.totalPaymentAmount}"></td>
+            <td th:text="${excel.ticketPaymentAmount}"></td>
+            <td th:text="${excel.ticketType}"></td>
+            <td th:text="${excel.names}"></td>
+        </tr>
+    </table>
+</div>
+</body>
+</html>
