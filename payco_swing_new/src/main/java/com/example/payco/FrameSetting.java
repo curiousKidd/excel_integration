@@ -32,7 +32,10 @@ public class FrameSetting extends JFrame implements ActionListener {
     private JButton paycoButton = new JButton("payco Excel");
     private JButton btnSaveButton = new JButton("저장");
 
+    private JLabel label = new JLabel("Price");
+
     private JTextField paycoLabel = new JTextField(40);
+    private JTextField priceLabel = new JTextField(40);
 
     private MultipartFile paycoMultipartFile = null;
 
@@ -50,15 +53,28 @@ public class FrameSetting extends JFrame implements ActionListener {
         setBounds(100, 100, 554, 239);
         setTitle("페이코 합산하는거에 시간 들이지 마요");
 
-        paycoLabel.setEditable(false);
+
 
         getContentPane().setLayout(null);
 
+        // 페이코 버튼
         paycoButton.setBounds(62, 30, 120, 20);
+        label.setHorizontalAlignment(JLabel.CENTER);
         getContentPane().add(paycoButton);
 
+        // 페이코 라벨
         paycoLabel.setBounds(190, 30, 310, 20);
+        paycoLabel.setEditable(false);      // 수정 불가능하게
         getContentPane().add(paycoLabel);
+        paycoLabel.setColumns(10);
+
+
+        label.setBounds(62, 60, 120, 20);
+        getContentPane().add(label);
+
+        priceLabel.setBounds(190, 60, 310, 20);
+        priceLabel.setText("9000");
+        getContentPane().add(priceLabel);
         paycoLabel.setColumns(10);
 
         btnSaveButton.setBounds(420, 200, 80, 20);
@@ -115,6 +131,8 @@ public class FrameSetting extends JFrame implements ActionListener {
 
     private java.util.List<ExcelDTO> excelSum(java.util.List<PaycoDTO> paycoDTOS) {
 
+        int price = Integer.parseInt(priceLabel.getText());
+
         java.util.List<ExcelDTO> excelDTOS = new ArrayList<>();
         String excelNames = "";
 
@@ -143,7 +161,7 @@ public class FrameSetting extends JFrame implements ActionListener {
                         .totalPaymentAmount(m.getTotalPaymentAmount())
                         .ticketPaymentAmount(m.getTicketPaymentAmount())
                         .ticketType(m.getTicketType())
-                        .names(m.getTicketPaymentAmount() > 8000 ? paycoDTOS.stream()
+                        .names(m.getTicketPaymentAmount() > price ? paycoDTOS.stream()
                                 .filter(f ->
                                         f.getName().equals(m.getName())
                                                 && f.getTranDate().substring(0, 10).equals(m.getTranDate().substring(0, 10))
@@ -151,8 +169,8 @@ public class FrameSetting extends JFrame implements ActionListener {
                                                 && !f.getTranType().equals("취소")
                                 )
                                 .map(fm -> !fm.getTranType().equals("승인")
-                                        ? fm.getTicketPaymentAmount() > 8000
-                                        ? over8000Name(fm, paycoDTOS) : fm.getUsePlace() : m.getTranNumber().equals(fm.getTranNumber())
+                                        ? fm.getTicketPaymentAmount() > price
+                                        ? overPriceName(fm, paycoDTOS) : fm.getUsePlace() : m.getTranNumber().equals(fm.getTranNumber())
                                         ? fm.getName() : "")
                                 .collect(Collectors.toList())
                                 .toString().replace("[, ", "").replace(", ,", ",").replace("]", "").replace("[", "") : "")
@@ -163,7 +181,7 @@ public class FrameSetting extends JFrame implements ActionListener {
         return excelDTOS;
     }
 
-    private String over8000Name(PaycoDTO dto, List<PaycoDTO> paycoDTOS) {
+    private String overPriceName(PaycoDTO dto, List<PaycoDTO> paycoDTOS) {
         return paycoDTOS.stream()
                 .filter(f ->
                         f.getName().equals(dto.getUsePlace())
