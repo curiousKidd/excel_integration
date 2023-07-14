@@ -54,7 +54,6 @@ public class FrameSetting extends JFrame implements ActionListener {
         setTitle("페이코 합산하는거에 시간 들이지 마요");
 
 
-
         getContentPane().setLayout(null);
 
         // 페이코 버튼
@@ -161,24 +160,45 @@ public class FrameSetting extends JFrame implements ActionListener {
                         .totalPaymentAmount(m.getTotalPaymentAmount())
                         .ticketPaymentAmount(m.getTicketPaymentAmount())
                         .ticketType(m.getTicketType())
-                        .names(m.getTicketPaymentAmount() > price ? paycoDTOS.stream()
-                                .filter(f ->
-                                        f.getName().equals(m.getName())
-                                                && f.getTranDate().substring(0, 10).equals(m.getTranDate().substring(0, 10))
-                                                && f.getTicketType().equals(m.getTicketType())
-                                                && !f.getTranType().equals("취소")
-                                )
-                                .map(fm -> !fm.getTranType().equals("승인")
-                                        ? fm.getTicketPaymentAmount() > price
-                                        ? overPriceName(fm, paycoDTOS) : fm.getUsePlace() : m.getTranNumber().equals(fm.getTranNumber())
-                                        ? fm.getName() : "")
-                                .collect(Collectors.toList())
-                                .toString().replace("[, ", "").replace(", ,", ",").replace("]", "").replace("[", "") : "")
+                        .names(m.getTicketPaymentAmount() > price ? getNames(m, price, paycoDTOS) : "")
                         .build()
                 )
                 .collect(Collectors.toList());
 
         return excelDTOS;
+    }
+
+    private String getNames(PaycoDTO paycoDTO, int price, List<PaycoDTO> paycoDTOS) {
+        HashMap<String, Integer> map = new HashMap<>();
+
+        StringBuilder sb = new StringBuilder();
+
+        paycoDTOS.stream()
+                .filter(f ->
+                        f.getName().equals(paycoDTO.getName())
+                                && f.getTranDate().substring(0, 10).equals(paycoDTO.getTranDate().substring(0, 10))
+                                && f.getTicketType().equals(paycoDTO.getTicketType())
+                                && !f.getTranType().equals("취소")
+                )
+                .map(fm -> !fm.getTranType().equals("승인")
+                        ? fm.getTicketPaymentAmount() > price
+                        ? sb.append(overPriceName(fm, paycoDTOS))
+                        : fm.getTranType().equals("받기") ?
+                        map.put(fm.getUsePlace(), map.getOrDefault(fm.getUsePlace(), 0) + fm.getTicketPaymentAmount())
+                        : map.put(fm.getUsePlace(), map.getOrDefault(fm.getUsePlace(), 0) - fm.getTicketPaymentAmount())
+                        : paycoDTO.getTranNumber().equals(fm.getTranNumber())
+                        ? map.put(fm.getName(), fm.getTicketPaymentAmount()) : "")
+                .collect(Collectors.toList());
+
+
+        for (String key : map.keySet()) {
+            if (map.get(key) > 0) {
+                sb.append(key);
+                sb.append(", ");
+            }
+        }
+
+        return sb.toString();
     }
 
     private String overPriceName(PaycoDTO dto, List<PaycoDTO> paycoDTOS) {
