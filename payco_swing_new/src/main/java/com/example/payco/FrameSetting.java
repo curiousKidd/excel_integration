@@ -53,7 +53,6 @@ public class FrameSetting extends JFrame implements ActionListener {
         setBounds(100, 100, 554, 239);
         setTitle("페이코 합산하는거에 시간 들이지 마요");
 
-
         getContentPane().setLayout(null);
 
         // 페이코 버튼
@@ -66,7 +65,6 @@ public class FrameSetting extends JFrame implements ActionListener {
         paycoLabel.setEditable(false);      // 수정 불가능하게
         getContentPane().add(paycoLabel);
         paycoLabel.setColumns(10);
-
 
         label.setBounds(62, 60, 120, 20);
         getContentPane().add(label);
@@ -122,13 +120,14 @@ public class FrameSetting extends JFrame implements ActionListener {
 
         java.util.List<PaycoDTO> paycoExcelData = excelToModelConvertUtil.excelToModelConvert(new PaycoDTO(), paycoExcelFile, 1);
 
-        java.util.List<ExcelDTO> excelSum = excelSum(paycoExcelData);
+        java.util.List<ExcelDTO> excelSum = getExcelData(paycoExcelData);
 
         exportExcel(excelSum);
 
     }
 
-    private java.util.List<ExcelDTO> excelSum(java.util.List<PaycoDTO> paycoDTOS) {
+    // 엑셀 데이터 생성
+    private java.util.List<ExcelDTO> getExcelData(java.util.List<PaycoDTO> paycoDTOS) {
 
         int price = Integer.parseInt(priceLabel.getText());
 
@@ -168,6 +167,7 @@ public class FrameSetting extends JFrame implements ActionListener {
         return excelDTOS;
     }
 
+    // 통합 사용자 이름 가져오기
     private String getNames(PaycoDTO paycoDTO, int price, List<PaycoDTO> paycoDTOS) {
         HashMap<String, Integer> map = new HashMap<>();
 
@@ -190,7 +190,6 @@ public class FrameSetting extends JFrame implements ActionListener {
                         ? map.put(fm.getName(), fm.getTicketPaymentAmount()) : "")
                 .collect(Collectors.toList());
 
-
         for (String key : map.keySet()) {
             if (map.get(key) > 0) {
                 sb.append(key);
@@ -201,6 +200,7 @@ public class FrameSetting extends JFrame implements ActionListener {
         return sb.toString();
     }
 
+    // 지정 금액 이상일 경우 method 실행
     private String overPriceName(PaycoDTO dto, List<PaycoDTO> paycoDTOS) {
         return paycoDTOS.stream()
                 .filter(f ->
@@ -214,6 +214,7 @@ public class FrameSetting extends JFrame implements ActionListener {
                 .toString();
     }
 
+    // 엑셀 생성
     private void exportExcel(List<ExcelDTO> list) {
 
         // Workbook 생성
@@ -284,6 +285,7 @@ public class FrameSetting extends JFrame implements ActionListener {
 
     }
 
+    // 폴더 생성
     private void folderCreateTest(String folderPath) {
 
         File file = new File(folderPath);
