@@ -170,7 +170,6 @@ public class FrameSetting extends JFrame implements ActionListener {
     // 통합 사용자 이름 가져오기
     private String getNames(PaycoDTO paycoDTO, int price, List<PaycoDTO> paycoDTOS) {
         HashMap<String, Integer> map = new HashMap<>();
-
         StringBuilder sb = new StringBuilder();
 
         paycoDTOS.stream()
@@ -183,8 +182,8 @@ public class FrameSetting extends JFrame implements ActionListener {
                 .map(fm -> !fm.getTranType().equals("승인")
                         ? fm.getTicketPaymentAmount() > price
                         ? sb.append(overPriceName(fm, paycoDTOS))
-                        : fm.getTranType().equals("받기") ?
-                        map.put(fm.getUsePlace(), map.getOrDefault(fm.getUsePlace(), 0) + fm.getTicketPaymentAmount())
+                        : fm.getTranType().equals("받기")
+                        ? map.put(fm.getUsePlace(), map.getOrDefault(fm.getUsePlace(), 0) + fm.getTicketPaymentAmount())
                         : map.put(fm.getUsePlace(), map.getOrDefault(fm.getUsePlace(), 0) - fm.getTicketPaymentAmount())
                         : paycoDTO.getTranNumber().equals(fm.getTranNumber())
                         ? map.put(fm.getName(), fm.getTicketPaymentAmount()) : "")
@@ -202,16 +201,31 @@ public class FrameSetting extends JFrame implements ActionListener {
 
     // 지정 금액 이상일 경우 method 실행
     private String overPriceName(PaycoDTO dto, List<PaycoDTO> paycoDTOS) {
-        return paycoDTOS.stream()
+        HashMap<String, Integer> map = new HashMap<>();
+        StringBuilder sb = new StringBuilder();
+
+        paycoDTOS.stream()
                 .filter(f ->
                         f.getName().equals(dto.getUsePlace())
                                 && f.getTranDate().substring(0, 10).equals(dto.getTranDate().substring(0, 10))
                                 && f.getTicketType().equals(dto.getTicketType())
                                 && !f.getTranType().equals("승인")
                 )
-                .map(m -> m.getTranType().equals("받기") ? m.getUsePlace() : m.getName())
-                .collect(Collectors.toList())
-                .toString();
+                .map(m -> m.getTicketPaymentAmount() == dto.getTicketPaymentAmount()
+                        ? map.put(m.getName(), m.getTicketPaymentAmount())
+                        : m.getTranType().equals("받기")
+                        ? map.put(m.getUsePlace(), map.getOrDefault(m.getUsePlace(), 0) + m.getTicketPaymentAmount())
+                        : map.put(m.getUsePlace(), map.getOrDefault(m.getUsePlace(), 0) - m.getTicketPaymentAmount()))
+                .collect(Collectors.toList());
+
+        for (String key : map.keySet()) {
+            if (map.get(key) > 0) {
+                sb.append(key);
+                sb.append(", ");
+            }
+        }
+
+        return sb.toString();
     }
 
     // 엑셀 생성
