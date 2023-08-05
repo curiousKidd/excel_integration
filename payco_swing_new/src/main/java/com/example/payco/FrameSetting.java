@@ -22,6 +22,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class FrameSetting extends JFrame implements ActionListener {
 
@@ -136,18 +137,19 @@ public class FrameSetting extends JFrame implements ActionListener {
 
         Comparator<PaycoDTO> compare = Comparator
                 .comparing(PaycoDTO::getTicketType)
-                .thenComparing(PaycoDTO::getTranNumber);
+                .thenComparing(PaycoDTO::getName)
+                .thenComparing(PaycoDTO::getTranDate);
 
         Set<String> set = new HashSet<>();
 
         paycoDTOS.stream()
                 .sorted(Comparator.comparing(PaycoDTO::getTranType))
-                .filter(f -> f.getTranType().equals("취소"))
+                .filter(f -> "취소".equals(f.getTranType()))
                 .forEach(fe -> set.add(fe.getTranNumber()));
 
         excelDTOS = paycoDTOS.stream()
                 .sorted(compare)
-                .filter(f -> set.add(f.getTranNumber()) && f.getTranType().equals("승인"))
+                .filter(f -> set.add(f.getTranNumber()) && "승인".equals(f.getTranType()))
                 .map(m -> ExcelDTO.builder()
                         .tranNumber(m.getTranNumber())
                         .tranDate(m.getTranDate())
@@ -159,7 +161,8 @@ public class FrameSetting extends JFrame implements ActionListener {
                         .totalPaymentAmount(m.getTotalPaymentAmount())
                         .ticketPaymentAmount(m.getTicketPaymentAmount())
                         .ticketType(m.getTicketType())
-                        .names(m.getTicketPaymentAmount() > price ? getNames(m, price, paycoDTOS) : "")
+//                        .names(m.getTicketPaymentAmount() > price ? getNames(m, price, paycoDTOS) : "")
+                        .names(getNames(m, price, paycoDTOS))
                         .build()
                 )
                 .collect(Collectors.toList());
@@ -177,20 +180,36 @@ public class FrameSetting extends JFrame implements ActionListener {
                         f.getName().equals(paycoDTO.getName())
                                 && f.getTranDate().substring(0, 10).equals(paycoDTO.getTranDate().substring(0, 10))
                                 && f.getTicketType().equals(paycoDTO.getTicketType())
-                                && !f.getTranType().equals("취소")
+                                && !"취소".equals(f.getTranType())
                 )
-                .map(fm -> !fm.getTranType().equals("승인")
-                        ? fm.getTicketPaymentAmount() > price
-                        ? sb.append(overPriceName(fm, paycoDTOS))
-                        : fm.getTranType().equals("받기")
-                        ? map.put(fm.getUsePlace(), map.getOrDefault(fm.getUsePlace(), 0) + fm.getTicketPaymentAmount())
-                        : map.put(fm.getUsePlace(), map.getOrDefault(fm.getUsePlace(), 0) - fm.getTicketPaymentAmount())
-                        : paycoDTO.getTranNumber().equals(fm.getTranNumber())
-                        ? map.put(fm.getName(), fm.getTicketPaymentAmount()) : "")
+//                .map(fm -> !"승인".equals(fm.getTranType())
+//                        ? fm.getTicketPaymentAmount() > price
+//                          ? sb.append(overPriceName(fm, paycoDTOS))
+//                          : "받기".equals(fm.getTranType())
+//                              ? map.put(fm.getUsePlace(), map.getOrDefault(fm.getUsePlace(), 0) + fm.getTicketPaymentAmount())
+//                              : map.put(fm.getUsePlace(), map.getOrDefault(fm.getUsePlace(), 0) - fm.getTicketPaymentAmount())
+//                        : paycoDTO.getTranNumber().equals(fm.getTranNumber())
+//                          ? map.put(fm.getName(), fm.getTicketPaymentAmount())
+//                          : ""
+//                )
+                .map(fm -> {
+                    if (!"승인".equals(fm.getTranType())) {
+                        if (fm.getTicketPaymentAmount() > price) {
+                            sb.append(overPriceName(fm, paycoDTOS));
+                        } else if ("받기".equals(fm.getTranType())) {
+                            map.put(fm.getUsePlace(), map.getOrDefault(fm.getUsePlace(), 0) + fm.getTicketPaymentAmount());
+                        } else {
+                            map.put(fm.getUsePlace(), map.getOrDefault(fm.getUsePlace(), 0) - fm.getTicketPaymentAmount());
+                        }
+                    } else if (paycoDTO.getTranNumber().equals(fm.getTranNumber())) {
+                        map.put(fm.getName(), fm.getTicketPaymentAmount());
+                    }
+                    return ""; // 빈 문자열 반환 (변경 가능성 있음)
+                })
                 .collect(Collectors.toList());
 
         for (String key : map.keySet()) {
-            if (map.get(key) > 0) {
+            if (map.size() > 1 && map.get(key) > 0) {
                 sb.append(key);
                 sb.append(", ");
             }
@@ -199,7 +218,7 @@ public class FrameSetting extends JFrame implements ActionListener {
         return sb.toString();
     }
 
-    // 지정 금액 이상일 경우 method 실행
+    // 1인 이체금액이 지정 금액 이상일 경우 method 실행
     private String overPriceName(PaycoDTO dto, List<PaycoDTO> paycoDTOS) {
         HashMap<String, Integer> map = new HashMap<>();
         StringBuilder sb = new StringBuilder();
@@ -209,11 +228,11 @@ public class FrameSetting extends JFrame implements ActionListener {
                         f.getName().equals(dto.getUsePlace())
                                 && f.getTranDate().substring(0, 10).equals(dto.getTranDate().substring(0, 10))
                                 && f.getTicketType().equals(dto.getTicketType())
-                                && !f.getTranType().equals("승인")
+                                && !"승인".equals(f.getTranType())
                 )
                 .map(m -> m.getTicketPaymentAmount() == dto.getTicketPaymentAmount()
                         ? map.put(m.getName(), m.getTicketPaymentAmount())
-                        : m.getTranType().equals("받기")
+                        : "받기".equals(m.getTranType())
                         ? map.put(m.getUsePlace(), map.getOrDefault(m.getUsePlace(), 0) + m.getTicketPaymentAmount())
                         : map.put(m.getUsePlace(), map.getOrDefault(m.getUsePlace(), 0) - m.getTicketPaymentAmount()))
                 .collect(Collectors.toList());
