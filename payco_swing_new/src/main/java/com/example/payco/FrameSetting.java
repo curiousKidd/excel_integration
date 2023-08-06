@@ -21,6 +21,8 @@ import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -182,6 +184,7 @@ public class FrameSetting extends JFrame implements ActionListener {
                                 && f.getTicketType().equals(paycoDTO.getTicketType())
                                 && !"취소".equals(f.getTranType())
                 )
+
 //                .map(fm -> !"승인".equals(fm.getTranType())
 //                        ? fm.getTicketPaymentAmount() > price
 //                          ? sb.append(overPriceName(fm, paycoDTOS))
@@ -208,8 +211,41 @@ public class FrameSetting extends JFrame implements ActionListener {
                 })
                 .collect(Collectors.toList());
 
-        for (String key : map.keySet()) {
-            if (map.size() > 1 && map.get(key) > 0) {
+//        List<CompletableFuture> futures = new ArrayList<>();
+//
+//        for (int i = 0; i < filterDTOs.size(); i++) {
+//            int finalI = i;
+//            futures.add(
+//                    CompletableFuture.supplyAsync(() -> {
+//                        if (!"승인".equals(filterDTOs.get(finalI).getTranType())) {
+//                            if (filterDTOs.get(finalI).getTicketPaymentAmount() > price) {
+//                                sb.append(overPriceName(filterDTOs.get(finalI), paycoDTOS));
+//                            } else if ("받기".equals(filterDTOs.get(finalI).getTranType())) {
+//                                map.put(filterDTOs.get(finalI).getUsePlace(), map.getOrDefault(filterDTOs.get(finalI).getUsePlace(), 0) + filterDTOs.get(finalI).getTicketPaymentAmount());
+//                            } else {
+//                                map.put(filterDTOs.get(finalI).getUsePlace(), map.getOrDefault(filterDTOs.get(finalI).getUsePlace(), 0) - filterDTOs.get(finalI).getTicketPaymentAmount());
+//                            }
+//                        } else if (paycoDTO.getTranNumber().equals(filterDTOs.get(finalI).getTranNumber())) {
+//                            map.put(filterDTOs.get(finalI).getName(), filterDTOs.get(finalI).getTicketPaymentAmount());
+//                        }
+//
+//                        return "";
+//                    })
+//            );
+//        }
+//
+//        for (int i = 0; i < filterDTOs.size(); i++) {
+//            futures.get(i).join();
+//        }
+
+        //Map filter
+        Map<String, Integer> filteredMap = map.entrySet()
+                .stream()
+                .filter(f -> f.getValue() > 0)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        if (filteredMap.size() > 1) {
+            for (String key : filteredMap.keySet()) {
                 sb.append(key);
                 sb.append(", ");
             }
@@ -231,11 +267,13 @@ public class FrameSetting extends JFrame implements ActionListener {
                                 && !"승인".equals(f.getTranType())
                 )
                 .map(m -> m.getTicketPaymentAmount() == dto.getTicketPaymentAmount()
-                        ? map.put(m.getName(), m.getTicketPaymentAmount())
-                        : "받기".equals(m.getTranType())
-                        ? map.put(m.getUsePlace(), map.getOrDefault(m.getUsePlace(), 0) + m.getTicketPaymentAmount())
-                        : map.put(m.getUsePlace(), map.getOrDefault(m.getUsePlace(), 0) - m.getTicketPaymentAmount()))
+                            ? map.put(m.getName(), m.getTicketPaymentAmount())
+                            : "받기".equals(m.getTranType())
+                                ? map.put(m.getUsePlace(), map.getOrDefault(m.getUsePlace(), 0) + m.getTicketPaymentAmount())
+                                : map.put(m.getUsePlace(), map.getOrDefault(m.getUsePlace(), 0) - m.getTicketPaymentAmount()))
                 .collect(Collectors.toList());
+
+
 
         for (String key : map.keySet()) {
             if (map.get(key) > 0) {
