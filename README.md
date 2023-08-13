@@ -72,4 +72,55 @@ payco_swing 프로젝트에서의 단점을 보완 및 개선한 프로젝트입
 사용자(현 직장 동료)의 의견으로 수정 진행 예정
 기준 금액보다 많은 금액을 사용한 사람들의 이름은 무조건 나올 수 있는지 확인 요청
 
+### 2023.08.07
+``` java 
+private String getNames(PaycoDTO paycoDTO, int price, List<PaycoDTO> paycoDTOS) {
+    HashMap<String, Integer> map = new HashMap<>();
+    StringBuilder sb = new StringBuilder();
+
+    paycoDTOS.stream()
+            .filter(f ->
+                    f.getName().equals(paycoDTO.getName())
+                            && f.getTranDate().substring(0, 10).equals(paycoDTO.getTranDate().substring(0, 10))
+                            && f.getTicketType().equals(paycoDTO.getTicketType())
+                            && !f.getTranType().equals("취소")
+            )
+						/* 20230807 이전 로직 */
+            //.map(fm -> !fm.getTranType().equals("승인")
+            //        ? fm.getTicketPaymentAmount() > price
+            //       ? sb.append(overPriceName(fm, paycoDTOS))
+            //        : fm.getTranType().equals("받기")
+            //        ? map.put(fm.getUsePlace(), map.getOrDefault(fm.getUsePlace(), 0) + fm.getTicketPaymentAmount())
+            //        : map.put(fm.getUsePlace(), map.getOrDefault(fm.getUsePlace(), 0) - fm.getTicketPaymentAmount())
+            //        : paycoDTO.getTranNumber().equals(fm.getTranNumber())
+            //        ? map.put(fm.getName(), fm.getTicketPaymentAmount()) : "")
+						.map(fm -> {
+                    if (!"승인".equals(fm.getTranType())) {
+                        if (fm.getTicketPaymentAmount() > price) {
+                            sb.append(overPriceName(fm, paycoDTOS));
+                        } else if ("받기".equals(fm.getTranType())) {
+                            map.put(fm.getUsePlace(), map.getOrDefault(fm.getUsePlace(), 0) + fm.getTicketPaymentAmount());
+                        } else {
+                            map.put(fm.getUsePlace(), map.getOrDefault(fm.getUsePlace(), 0) - fm.getTicketPaymentAmount());
+                        }
+                    } else if (paycoDTO.getTranNumber().equals(fm.getTranNumber())) {
+                        map.put(fm.getName(), fm.getTicketPaymentAmount());
+                    }
+                    return ""; // 빈 문자열 반환 (변경 가능성 있음)
+
+            .collect(Collectors.toList());
+
+    for (String key : map.keySet()) {
+        if (map.get(key) > 0) {
+            sb.append(key);
+            sb.append(", ");
+        }
+    }
+
+    return sb.toString();
+}
+```
+20230807 기준으로 .map() 안에 로직이 변경되었습니다  
+→ 기존 삼항식을 사용하던 로직에서 if문을 사용하도록 로직 수정
+- 삼항식을 다중으로 사용하다보니 오히려 가독성이 떨어지게 되어 if문으로 수정되었습니다.
 
