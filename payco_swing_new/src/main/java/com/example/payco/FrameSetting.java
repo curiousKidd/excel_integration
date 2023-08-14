@@ -172,6 +172,7 @@ public class FrameSetting extends JFrame implements ActionListener {
     }
 
     // 통합 사용자 이름 가져오기
+    // paycoDTO : 승인 데이터
     private String getNames(PaycoDTO paycoDTO, int price) {
         HashMap<String, Integer> map = new HashMap<>();
         StringBuilder sb = new StringBuilder();
@@ -215,22 +216,24 @@ public class FrameSetting extends JFrame implements ActionListener {
     }
 
     // 받기 금액 추적
+    // PaycoDTO dto : 받기 내역 DTO
     private Map<String, Integer> amountTracking(PaycoDTO dto) {
         HashMap<String, Integer> map = new HashMap<>();
         StringBuilder sb = new StringBuilder();
 
         map.put(dto.getUsePlace(), dto.getTicketPaymentAmount());
-
+        System.out.println("===========");
         paycoExcelData.stream()
                 .filter(f ->
                         f.getName().equals(dto.getUsePlace())
                                 && f.getTranDate().substring(0, 10).equals(dto.getTranDate().substring(0, 10))
-                                && LocalDateTime.parse(f.getTranDate(), DATE_TIME_FORMATTER).compareTo(LocalDateTime.parse(dto.getTranDate(), DATE_TIME_FORMATTER)) <= 0
+                                && LocalDateTime.parse(f.getTranDate(), DATE_TIME_FORMATTER).compareTo(LocalDateTime.parse(dto.getTranDate(), DATE_TIME_FORMATTER)) < 0
                                 && f.getTicketType().equals(dto.getTicketType())
                                 && !"승인".equals(f.getTranType())
                 )
                 .map(m -> {
                     if ("받기".equals(m.getTranType())) {
+
                         map.putAll(amountTracking(m));
                         //                        map.put(m.getUsePlace(), map.getOrDefault(m.getUsePlace(), 0) + m.getTicketPaymentAmount());
                     } else {
@@ -239,6 +242,11 @@ public class FrameSetting extends JFrame implements ActionListener {
                     return m;
                 })
                 .collect(Collectors.toList());
+
+        map.entrySet()
+                .stream()
+//                .filter(f -> f.getValue() > 0)
+                .forEach(System.out::println);
 
         //Map filter
         Map<String, Integer> filteredMap = map.entrySet()
