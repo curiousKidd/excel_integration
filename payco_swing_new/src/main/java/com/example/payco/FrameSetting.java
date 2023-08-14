@@ -21,10 +21,7 @@ import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class FrameSetting extends JFrame implements ActionListener {
 
@@ -41,6 +38,9 @@ public class FrameSetting extends JFrame implements ActionListener {
     private JTextField priceLabel = new JTextField(40);
 
     private MultipartFile paycoMultipartFile = null;
+
+    private static List<PaycoDTO> paycoExcelData = new ArrayList<>();
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm:ss");
 
     public FrameSetting() {
         this.init();
@@ -121,16 +121,16 @@ public class FrameSetting extends JFrame implements ActionListener {
     public void excelData(
             @RequestParam(value = "fileUploadPayco") MultipartFile paycoExcelFile) throws Exception {
 
-        java.util.List<PaycoDTO> paycoExcelData = excelToModelConvertUtil.excelToModelConvert(new PaycoDTO(), paycoExcelFile, 1);
+        paycoExcelData = excelToModelConvertUtil.excelToModelConvert(new PaycoDTO(), paycoExcelFile, 1);
 
-        java.util.List<ExcelDTO> excelSum = getExcelData(paycoExcelData);
+        java.util.List<ExcelDTO> excelSum = getExcelData();
 
         exportExcel(excelSum);
 
     }
 
     // 엑셀 데이터 생성
-    private java.util.List<ExcelDTO> getExcelData(java.util.List<PaycoDTO> paycoDTOS) {
+    private java.util.List<ExcelDTO> getExcelData() {
 
         int price = Integer.parseInt(priceLabel.getText());
 
@@ -139,17 +139,16 @@ public class FrameSetting extends JFrame implements ActionListener {
 
         Comparator<PaycoDTO> compare = Comparator
                 .comparing(PaycoDTO::getTicketType)
-                .thenComparing(PaycoDTO::getName)
-                .thenComparing(PaycoDTO::getTranDate);
+                .thenComparing(PaycoDTO::getTranNumber);
 
         Set<String> set = new HashSet<>();
 
-        paycoDTOS.stream()
+        paycoExcelData.stream()
                 .sorted(Comparator.comparing(PaycoDTO::getTranType))
                 .filter(f -> "취소".equals(f.getTranType()))
                 .forEach(fe -> set.add(fe.getTranNumber()));
 
-        excelDTOS = paycoDTOS.stream()
+        excelDTOS = paycoExcelData.stream()
                 .sorted(compare)
                 .filter(f -> set.add(f.getTranNumber()) && "승인".equals(f.getTranType()))
                 .map(m -> ExcelDTO.builder()
@@ -163,8 +162,8 @@ public class FrameSetting extends JFrame implements ActionListener {
                         .totalPaymentAmount(m.getTotalPaymentAmount())
                         .ticketPaymentAmount(m.getTicketPaymentAmount())
                         .ticketType(m.getTicketType())
-//                        .names(m.getTicketPaymentAmount() > price ? getNames(m, price, paycoDTOS) : "")
-                        .names(getNames(m, price, paycoDTOS))
+                        //                        .names(m.getTicketPaymentAmount() > price ? getNames(m, price, paycoDTOS) : "")
+                        .names(getNames(m, price))
                         .build()
                 )
                 .collect(Collectors.toList());
@@ -173,72 +172,33 @@ public class FrameSetting extends JFrame implements ActionListener {
     }
 
     // 통합 사용자 이름 가져오기
-    private String getNames(PaycoDTO paycoDTO, int price, List<PaycoDTO> paycoDTOS) {
+    private String getNames(PaycoDTO paycoDTO, int price) {
         HashMap<String, Integer> map = new HashMap<>();
         StringBuilder sb = new StringBuilder();
 
-        paycoDTOS.stream()
+        paycoExcelData.stream()
                 .filter(f ->
                         f.getName().equals(paycoDTO.getName())
                                 && f.getTranDate().substring(0, 10).equals(paycoDTO.getTranDate().substring(0, 10))
                                 && f.getTicketType().equals(paycoDTO.getTicketType())
                                 && !"취소".equals(f.getTranType())
                 )
-
-//                .map(fm -> !"승인".equals(fm.getTranType())
-//                        ? fm.getTicketPaymentAmount() > price
-//                          ? sb.append(overPriceName(fm, paycoDTOS))
-//                          : "받기".equals(fm.getTranType())
-//                              ? map.put(fm.getUsePlace(), map.getOrDefault(fm.getUsePlace(), 0) + fm.getTicketPaymentAmount())
-//                              : map.put(fm.getUsePlace(), map.getOrDefault(fm.getUsePlace(), 0) - fm.getTicketPaymentAmount())
-//                        : paycoDTO.getTranNumber().equals(fm.getTranNumber())
-//                          ? map.put(fm.getName(), fm.getTicketPaymentAmount())
-//                          : ""
-//                )
                 .map(fm -> {
                     if (!"승인".equals(fm.getTranType())) {
-                        if (fm.getTicketPaymentAmount() > price) {
-                            sb.append(overPriceName(fm, paycoDTOS));
-                        } else if ("받기".equals(fm.getTranType())) {
-                            map.put(fm.getUsePlace(), map.getOrDefault(fm.getUsePlace(), 0) + fm.getTicketPaymentAmount());
+                        if ("받기".equals(fm.getTranType())) {
+                            map.putAll(amountTracking(fm));
+                            //                            map.put(fm.getUsePlace(), map.getOrDefault(fm.getUsePlace(), 0) + fm.getTicketPaymentAmount());
                         } else {
                             map.put(fm.getUsePlace(), map.getOrDefault(fm.getUsePlace(), 0) - fm.getTicketPaymentAmount());
                         }
                     } else if (paycoDTO.getTranNumber().equals(fm.getTranNumber())) {
-                        map.put(fm.getName(), fm.getTicketPaymentAmount());
+                        map.put(fm.getName(), map.getOrDefault(fm.getName(), 0) + fm.getTicketPaymentAmount());
+
                     }
-                    return ""; // 빈 문자열 반환 (변경 가능성 있음)
+                    return fm;
                 })
                 .collect(Collectors.toList());
 
-//        List<CompletableFuture> futures = new ArrayList<>();
-//
-//        for (int i = 0; i < filterDTOs.size(); i++) {
-//            int finalI = i;
-//            futures.add(
-//                    CompletableFuture.supplyAsync(() -> {
-//                        if (!"승인".equals(filterDTOs.get(finalI).getTranType())) {
-//                            if (filterDTOs.get(finalI).getTicketPaymentAmount() > price) {
-//                                sb.append(overPriceName(filterDTOs.get(finalI), paycoDTOS));
-//                            } else if ("받기".equals(filterDTOs.get(finalI).getTranType())) {
-//                                map.put(filterDTOs.get(finalI).getUsePlace(), map.getOrDefault(filterDTOs.get(finalI).getUsePlace(), 0) + filterDTOs.get(finalI).getTicketPaymentAmount());
-//                            } else {
-//                                map.put(filterDTOs.get(finalI).getUsePlace(), map.getOrDefault(filterDTOs.get(finalI).getUsePlace(), 0) - filterDTOs.get(finalI).getTicketPaymentAmount());
-//                            }
-//                        } else if (paycoDTO.getTranNumber().equals(filterDTOs.get(finalI).getTranNumber())) {
-//                            map.put(filterDTOs.get(finalI).getName(), filterDTOs.get(finalI).getTicketPaymentAmount());
-//                        }
-//
-//                        return "";
-//                    })
-//            );
-//        }
-//
-//        for (int i = 0; i < filterDTOs.size(); i++) {
-//            futures.get(i).join();
-//        }
-
-        //Map filter
         Map<String, Integer> filteredMap = map.entrySet()
                 .stream()
                 .filter(f -> f.getValue() > 0)
@@ -254,35 +214,44 @@ public class FrameSetting extends JFrame implements ActionListener {
         return sb.toString();
     }
 
-    // 1인 이체금액이 지정 금액 이상일 경우 method 실행
-    private String overPriceName(PaycoDTO dto, List<PaycoDTO> paycoDTOS) {
+    // 받기 금액 추적
+    private Map<String, Integer> amountTracking(PaycoDTO dto) {
         HashMap<String, Integer> map = new HashMap<>();
         StringBuilder sb = new StringBuilder();
 
-        paycoDTOS.stream()
+        map.put(dto.getUsePlace(), dto.getTicketPaymentAmount());
+
+        paycoExcelData.stream()
                 .filter(f ->
                         f.getName().equals(dto.getUsePlace())
                                 && f.getTranDate().substring(0, 10).equals(dto.getTranDate().substring(0, 10))
+                                && LocalDateTime.parse(f.getTranDate(), DATE_TIME_FORMATTER).compareTo(LocalDateTime.parse(dto.getTranDate(), DATE_TIME_FORMATTER)) <= 0
                                 && f.getTicketType().equals(dto.getTicketType())
                                 && !"승인".equals(f.getTranType())
                 )
-                .map(m -> m.getTicketPaymentAmount() == dto.getTicketPaymentAmount()
-                            ? map.put(m.getName(), m.getTicketPaymentAmount())
-                            : "받기".equals(m.getTranType())
-                                ? map.put(m.getUsePlace(), map.getOrDefault(m.getUsePlace(), 0) + m.getTicketPaymentAmount())
-                                : map.put(m.getUsePlace(), map.getOrDefault(m.getUsePlace(), 0) - m.getTicketPaymentAmount()))
+                .map(m -> {
+                    if ("받기".equals(m.getTranType())) {
+                        map.putAll(amountTracking(m));
+                        //                        map.put(m.getUsePlace(), map.getOrDefault(m.getUsePlace(), 0) + m.getTicketPaymentAmount());
+                    } else {
+                        map.put(m.getUsePlace(), map.getOrDefault(m.getUsePlace(), 0) - m.getTicketPaymentAmount());
+                    }
+                    return m;
+                })
                 .collect(Collectors.toList());
 
+        //Map filter
+        Map<String, Integer> filteredMap = map.entrySet()
+                .stream()
+                .filter(f -> f.getValue() > 0)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-
-        for (String key : map.keySet()) {
-            if (map.get(key) > 0) {
-                sb.append(key);
-                sb.append(", ");
-            }
+        for (String key : filteredMap.keySet()) {
+            sb.append(key);
+            sb.append(", ");
         }
-
-        return sb.toString();
+        return filteredMap;
+        //        return sb.toString();
     }
 
     // 엑셀 생성
