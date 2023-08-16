@@ -21,6 +21,7 @@ import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 public class FrameSetting extends JFrame implements ActionListener {
@@ -41,6 +42,8 @@ public class FrameSetting extends JFrame implements ActionListener {
 
     private static List<PaycoDTO> paycoExcelData = new ArrayList<>();
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm:ss");
+
+    private static int price = 0;
 
     public FrameSetting() {
         this.init();
@@ -123,16 +126,16 @@ public class FrameSetting extends JFrame implements ActionListener {
 
         paycoExcelData = excelToModelConvertUtil.excelToModelConvert(new PaycoDTO(), paycoExcelFile, 1);
 
-        java.util.List<ExcelDTO> excelSum = getExcelData();
+        List<ExcelDTO> excelSum = getExcelData();
 
         exportExcel(excelSum);
 
     }
 
     // 엑셀 데이터 생성
-    private java.util.List<ExcelDTO> getExcelData() {
+    private List<ExcelDTO> getExcelData() {
 
-        int price = Integer.parseInt(priceLabel.getText());
+        price = Integer.parseInt(priceLabel.getText());
 
         java.util.List<ExcelDTO> excelDTOS = new ArrayList<>();
         String excelNames = "";
@@ -163,7 +166,7 @@ public class FrameSetting extends JFrame implements ActionListener {
                         .ticketPaymentAmount(m.getTicketPaymentAmount())
                         .ticketType(m.getTicketType())
                         //                        .names(m.getTicketPaymentAmount() > price ? getNames(m, price, paycoDTOS) : "")
-                        .names(getNames(m, price))
+                        .names(getNames(m))
                         .build()
                 )
                 .collect(Collectors.toList());
@@ -173,7 +176,7 @@ public class FrameSetting extends JFrame implements ActionListener {
 
     // 통합 사용자 이름 가져오기
     // paycoDTO : 승인 데이터
-    private String getNames(PaycoDTO paycoDTO, int price) {
+    private String getNames(PaycoDTO paycoDTO) {
         HashMap<String, Integer> map = new HashMap<>();
         StringBuilder sb = new StringBuilder();
 
@@ -220,33 +223,37 @@ public class FrameSetting extends JFrame implements ActionListener {
     private Map<String, Integer> amountTracking(PaycoDTO dto) {
         HashMap<String, Integer> map = new HashMap<>();
         StringBuilder sb = new StringBuilder();
+        AtomicBoolean approvalCheck = new AtomicBoolean(false);
+
+        Comparator<PaycoDTO> compare = Comparator
+                .comparing(PaycoDTO::getTicketType)
+                .thenComparing(PaycoDTO::getTranNumber).reversed();
 
         map.put(dto.getUsePlace(), dto.getTicketPaymentAmount());
-        System.out.println("===========");
+
         paycoExcelData.stream()
+                .sorted(compare)
                 .filter(f ->
                         f.getName().equals(dto.getUsePlace())
                                 && f.getTranDate().substring(0, 10).equals(dto.getTranDate().substring(0, 10))
                                 && LocalDateTime.parse(f.getTranDate(), DATE_TIME_FORMATTER).compareTo(LocalDateTime.parse(dto.getTranDate(), DATE_TIME_FORMATTER)) < 0
                                 && f.getTicketType().equals(dto.getTicketType())
-                                && !"승인".equals(f.getTranType())
+                                && !"취소".equals(f.getTranType())
                 )
                 .map(m -> {
-                    if ("받기".equals(m.getTranType())) {
-
-                        map.putAll(amountTracking(m));
-                        //                        map.put(m.getUsePlace(), map.getOrDefault(m.getUsePlace(), 0) + m.getTicketPaymentAmount());
-                    } else {
-                        map.put(m.getUsePlace(), map.getOrDefault(m.getUsePlace(), 0) - m.getTicketPaymentAmount());
+                    if (!approvalCheck.get()) {
+                        if ("받기".equals(m.getTranType())) {
+                            map.putAll(amountTracking(m));
+                            //                        map.put(m.getUsePlace(), map.getOrDefault(m.getUsePlace(), 0) + m.getTicketPaymentAmount());
+                        } else if ("보내기".equals(m.getTranType())) {
+                            map.put(m.getUsePlace(), map.getOrDefault(m.getUsePlace(), 0) - m.getTicketPaymentAmount());
+                        } else if ("승인".equals(m.getTranType()) && m.getTicketPaymentAmount() % price == 0) {
+                            approvalCheck.set(true);
+                        }
                     }
                     return m;
                 })
                 .collect(Collectors.toList());
-
-        map.entrySet()
-                .stream()
-//                .filter(f -> f.getValue() > 0)
-                .forEach(System.out::println);
 
         //Map filter
         Map<String, Integer> filteredMap = map.entrySet()
@@ -254,12 +261,7 @@ public class FrameSetting extends JFrame implements ActionListener {
                 .filter(f -> f.getValue() > 0)
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-        for (String key : filteredMap.keySet()) {
-            sb.append(key);
-            sb.append(", ");
-        }
         return filteredMap;
-        //        return sb.toString();
     }
 
     // 엑셀 생성
